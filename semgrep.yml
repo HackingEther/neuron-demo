@@ -1,31 +1,34 @@
 rules:
-  - id: js-unsafe-eval
-    message: Avoid eval(...) — executes arbitrary code
-    severity: HIGH
-    languages: [javascript, typescript]
-    pattern: eval($X)
-
-  - id: js-insecure-regex
-    message: Potential catastrophic backtracking — bound or simplify the pattern
-    severity: HIGH
-    languages: [javascript, typescript]
-    pattern-regex: /(a+)+\$$|(\(.+\)\+)+\$$|(\[[^\]]*\]\+)+\$$/
-
-  - id: js-nullish-deref
-    message: Possible null/undefined access — guard or use optional chaining (?.)
-    severity: MEDIUM
-    languages: [javascript, typescript]
-    pattern: |
-      $OBJ.$FIELD.$REST
-    metavariable-pattern:
-      metavariable: $OBJ
-      pattern-either:
-        - pattern: null
-        - pattern: undefined
-
-  - id: js-off-by-one-index
-    message: Possible off-by-one when indexing with length — check boundaries
-    severity: MEDIUM
-    languages: [javascript, typescript]
+  # 1. Avoid eval()
+  - id: no-eval-demo
     patterns:
-      - pattern: $ARR[$ARR.length]
+      - pattern: eval($X)
+    message: Avoid eval(...) — executes arbitrary code
+    severity: MEDIUM
+    languages: [javascript]
+
+  # 2. Off-by-one loop (<= array.length)
+  - id: off-by-one-loop
+    patterns:
+      - pattern: for (var $i = 0; $i <= $ARR.length; $X)
+    message: Possible off-by-one error — loop runs one element past the array
+    severity: HIGH
+    languages: [javascript]
+
+  # 3. Null/undefined property access (obj.prop without check)
+  - id: null-access
+    patterns:
+      - pattern: $OBJ.$PROP
+    message: Possible null/undefined access on object property
+    severity: HIGH
+    languages: [javascript]
+    metadata:
+      note: This is simplistic — real-world detection would need dataflow.
+
+  # 4. Insecure regex (ReDoS-style)
+  - id: insecure-regex
+    patterns:
+      - pattern-regex: '(\(.*\+.*\)\+)'   # simplistic ReDoS indicator
+    message: Potential insecure regex — avoid patterns with nested quantifiers like (a+)+
+    severity: CRITICAL
+    languages: [javascript]
