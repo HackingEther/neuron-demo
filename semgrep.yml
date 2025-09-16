@@ -1,34 +1,57 @@
 rules:
-  # 1. Avoid eval()
+  # A. Avoid eval(...) — baseline sanity check
   - id: no-eval-demo
-    patterns:
-      - pattern: eval($X)
+    languages: [javascript]
     message: Avoid eval(...) — executes arbitrary code
     severity: MEDIUM
-    languages: [javascript]
+    patterns:
+      - pattern: eval($X)
 
-  # 2. Off-by-one loop (<= array.length)
+  # B. Off-by-one loop: using "<=" with array.length
+  # Matches typical for-loops that step with i++ | ++i and use <= length.
   - id: off-by-one-loop
-    patterns:
-      - pattern: for (var $i = 0; $i <= $ARR.length; $X)
-    message: Possible off-by-one error — loop runs one element past the array
-    severity: HIGH
     languages: [javascript]
-
-  # 3. Null/undefined property access (obj.prop without check)
-  - id: null-access
-    patterns:
-      - pattern: $OBJ.$PROP
-    message: Possible null/undefined access on object property
+    message: Possible off-by-one error — loop uses "<=" with array.length
     severity: HIGH
-    languages: [javascript]
-    metadata:
-      note: This is simplistic — real-world detection would need dataflow.
-
-  # 4. Insecure regex (ReDoS-style)
-  - id: insecure-regex
     patterns:
-      - pattern-regex: '(\(.*\+.*\)\+)'   # simplistic ReDoS indicator
-    message: Potential insecure regex — avoid patterns with nested quantifiers like (a+)+
+      - pattern: |
+          for (let $I = 0; $I <= $ARR.length; $STEP) {
+            ...
+          }
+      - metavariable-pattern:
+          metavariable: $STEP
+          pattern-either:
+            - pattern: $I++
+            - pattern: ++$I
+            - pattern: $I += 1
+
+  # C. Null/undefined access on a function parameter (demo-friendly)
+  # Triggers when a function param is dereferenced without any local null check.
+  - id: null-access-param
+    languages: [javascript]
+    message: Possible null/undefined access on parameter without a local check
+    severity: HIGH
+    patterns:
+      - pattern: |
+          function $F($X, ...) {
+            ...
+            $X.$PROP
+            ...
+          }
+      # If there is a guard like: if ($X != null && $X !== undefined) { ... }
+      # then suppress. (Keeps the demo realistic but deterministic.)
+      - pattern-not: |
+          function $F($X, ...) {
+            ...
+            if ($X != null && $X !== undefined) { ... }
+            ...
+          }
+
+  # D. Insecure regex (classic ReDoS shape "(a+)+") in literal or constructor
+  - id: insecure-regex-redos
+    languages: [javascript]
+    message: Potential ReDoS — nested quantifier like "(a+)+"
     severity: CRITICAL
-    languages: [javascript]
+    pattern-either:
+      - pattern: /(a+)+/
+      - pattern: new RegExp("(a+)+")
