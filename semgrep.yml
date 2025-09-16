@@ -1,35 +1,32 @@
 rules:
-  # 1) No eval
-  - id: js-no-eval-demo
+  - id: js-unsafe-eval
     message: Avoid eval(...) — executes arbitrary code
-    severity: MEDIUM
+    severity: HIGH
     languages: [javascript, typescript]
     pattern: eval($X)
 
-  # 2) Off-by-one: <= array.length inside for-loop
-  - id: js-off-by-one-loop
-    message: Loop iterates one past the end (use i < array.length).
+  - id: js-insecure-regex
+    message: Potential catastrophic backtracking — bound or simplify the pattern
     severity: HIGH
     languages: [javascript, typescript]
-    patterns:
-      - pattern: |
-          for (let $I = 0; $I <= $ARR.length; $I++) {
-            ...
-          }
+    pattern-regex: /(a+)+\$$|(\(.+\)\+)+\$$|(\[[^\]]*\]\+)+\$$/
 
-  # 3) Possible null/undefined dereference of .length
-  #    (broad on purpose for the demo)
-  - id: js-null-deref-length
-    message: Potential null/undefined access before reading .length
+  - id: js-nullish-deref
+    message: Possible null/undefined access — guard or use optional chaining (?.)
     severity: MEDIUM
     languages: [javascript, typescript]
-    pattern: $X.length
+    pattern: |
+      $OBJ.$FIELD.$REST
+    metavariable-pattern:
+      metavariable: $OBJ
+      pattern-either:
+        - pattern: null
+        - pattern: undefined
 
-  # 4) REDoS-prone regex /(a+)+$/
-  - id: js-redos-a-plus-nested
-    message: Potential catastrophic backtracking in /(a+)+$/
-    severity: HIGH
+  - id: js-off-by-one-index
+    message: Possible off-by-one when indexing with length — check boundaries
+    severity: MEDIUM
     languages: [javascript, typescript]
-    pattern-either:
-      - pattern: /^(a+)+$/
-      - pattern: new RegExp("^(a+)+$")
+    patterns:
+      - pattern: $ARR[$ARR.length]
+
