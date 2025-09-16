@@ -1,32 +1,35 @@
 rules:
-  - id: js-unsafe-eval
+  # 1) No eval
+  - id: js-no-eval-demo
     message: Avoid eval(...) — executes arbitrary code
-    severity: HIGH
+    severity: MEDIUM
     languages: [javascript, typescript]
     pattern: eval($X)
 
-  - id: js-insecure-regex
-    message: Potential catastrophic backtracking — consider bounding, precompiling, or safer regex
+  # 2) Off-by-one: <= array.length inside for-loop
+  - id: js-off-by-one-loop
+    message: Loop iterates one past the end (use i < array.length).
     severity: HIGH
     languages: [javascript, typescript]
-    pattern-regex: /(a+)+\$$|(\(.+\)\+)+\$$|(\[[^\]]*\]\+)+\$$/
-
-  - id: js-nullish-deref
-    message: Possible null/undefined access — guard or use optional chaining (?.)
-    severity: MEDIUM
-    languages: [javascript, typescript]
-    pattern: |
-      $OBJ.$FIELD.$REST
-    metavariable-pattern:
-      metavariable: $OBJ
-      pattern-either:
-        - pattern: null
-        - pattern: undefined
-
-  - id: js-off-by-one-index
-    message: Possible off-by-one when indexing with length — check boundaries
-    severity: MEDIUM
-    languages: [javascript, typescript]
     patterns:
-      - pattern: $ARR[$ARR.length]
-      - pattern: $ARR[$N + $M]  # intentionally broad; demo signal
+      - pattern: |
+          for (let $I = 0; $I <= $ARR.length; $I++) {
+            ...
+          }
+
+  # 3) Possible null/undefined dereference of .length
+  #    (broad on purpose for the demo)
+  - id: js-null-deref-length
+    message: Potential null/undefined access before reading .length
+    severity: MEDIUM
+    languages: [javascript, typescript]
+    pattern: $X.length
+
+  # 4) REDoS-prone regex /(a+)+$/
+  - id: js-redos-a-plus-nested
+    message: Potential catastrophic backtracking in /(a+)+$/
+    severity: HIGH
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: /^(a+)+$/
+      - pattern: new RegExp("^(a+)+$")
