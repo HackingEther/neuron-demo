@@ -1,6 +1,32 @@
 rules:
-  - id: no-eval-demo
+  - id: js-unsafe-eval
     message: Avoid eval(...) — executes arbitrary code
-    severity: MEDIUM
+    severity: HIGH
     languages: [javascript, typescript]
     pattern: eval($X)
+
+  - id: js-insecure-regex
+    message: Potential catastrophic backtracking — consider bounding, precompiling, or safer regex
+    severity: HIGH
+    languages: [javascript, typescript]
+    pattern-regex: /(a+)+\$$|(\(.+\)\+)+\$$|(\[[^\]]*\]\+)+\$$/
+
+  - id: js-nullish-deref
+    message: Possible null/undefined access — guard or use optional chaining (?.)
+    severity: MEDIUM
+    languages: [javascript, typescript]
+    pattern: |
+      $OBJ.$FIELD.$REST
+    metavariable-pattern:
+      metavariable: $OBJ
+      pattern-either:
+        - pattern: null
+        - pattern: undefined
+
+  - id: js-off-by-one-index
+    message: Possible off-by-one when indexing with length — check boundaries
+    severity: MEDIUM
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: $ARR[$ARR.length]
+      - pattern: $ARR[$N + $M]  # intentionally broad; demo signal
