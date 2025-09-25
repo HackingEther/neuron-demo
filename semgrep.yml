@@ -1,31 +1,52 @@
 rules:
+  # 1) Unsafe eval
   - id: js-unsafe-eval
     message: Avoid eval(...) — executes arbitrary code
     severity: HIGH
     languages: [javascript, typescript]
-    pattern: eval($X)
+    pattern: eval(...)
 
+  # 2) Insecure regex (simple ReDoS demo): look for literal nested quantifiers like (a+)+ or (.+)+
+  #    Works for either /.../ literals or strings passed to new RegExp(...)
   - id: js-insecure-regex
-    message: Potential catastrophic backtracking — bound or simplify the pattern
+    message: Potential catastrophic backtracking — nested quantifier like (a+)+ or (.+)+
     severity: HIGH
     languages: [javascript, typescript]
-    pattern-regex: /(a+)+\$$|(\(.+\)\+)+\$$|(\[[^\]]*\]\+)+\$$/
+    pattern-either:
+      - pattern-regex: "\\(a\\+\\)\\+"
+      - pattern-regex: "\\(\\.\\+\\)\\+"
 
+  # 3) Null/undefined deref after explicit null assignment
   - id: js-nullish-deref
     message: Possible null/undefined access — guard or use optional chaining (?.)
     severity: MEDIUM
     languages: [javascript, typescript]
-    pattern: |
-      $OBJ.$FIELD.$REST
+    patterns:
+      # somewhere earlier in the function/file: const x = null; (or let/var)
+      - pattern-inside: |
+          ...
+          $DECL $X = null;
+          ...
+      - pattern-either:
+          - pattern: $X.$PROP
+          - pattern: $X[$IDX]
     metavariable-pattern:
-      metavariable: $OBJ
-      pattern-either:
-        - pattern: null
-        - pattern: undefined
+      - metavariable: $DECL
+        pattern-either:
+          - pattern: const
+          - pattern: let
+          - pattern: var
 
+  # 4) Off-by-one: i <= arr.length while indexing arr[i]
   - id: js-off-by-one-index
-    message: Possible off-by-one when indexing with length — check boundaries
+    message: Possible off-by-one when iterating with "<= arr.length" and indexing arr[i]
     severity: MEDIUM
     languages: [javascript, typescript]
     patterns:
-      - pattern: $ARR[$ARR.length]
+      - pattern: |
+          for (let $I = 0; $I <= $ARR.length; $I++) {
+            ...
+          }
+      - pattern-either:
+          - pattern: $ARR[$I]
+          - pattern: $ARR[$I + $K]

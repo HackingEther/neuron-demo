@@ -1,0 +1,13 @@
+[
+  {
+    "tool": "semgrep",
+    "rule_id": "no-eval-demo",
+    "severity": "MEDIUM",
+    "file": "bad.js",
+    "start_line": 3,
+    "end_line": 3,
+    "title": "Avoid eval(...) — executes arbitrary code",
+    "message": "Avoid eval(...) — executes arbitrary code",
+    "fingerprint": "bad.js:3:no-eval-demo"
+  }
+]
